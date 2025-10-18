@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Budget Manager — Glass UI</title>
+
+  <!-- System fonts (uses Apple's SF system where available) -->
+  <style>
+    :root{
+      --bg-1: rgba(18,20,23,1);
+      --glass-bg: rgba(255,255,255,0.06);
+      --card-bg: rgba(255,255,255,0.06);
+      --accent:  linear-gradient(135deg, rgba(127,96,255,0.9), rgba(0,200,255,0.9));
+      --muted: rgba(255,255,255,0.55);
+      --glass-border: rgba(255,255,255,0.12);
+      --glass-strong: rgba(255,255,255,0.09);
+      --success: #2ecc71;
+      --danger: #ff7b7b;
+      --glass-shadow: 0 8px 30px rgba(2,6,23,0.6);
+      --radius: 16px;
+      font-synthesis: none;
+    }
+
+    /* Reset & basic layout */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background: radial-gradient(1200px 700px at 10% 10%, rgba(127,96,255,0.14), transparent 6%),
+                  radial-gradient(900px 500px at 90% 90%, rgba(0,200,255,0.07), transparent 6%),
+                  var(--bg-1);
+      color: #fff;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:48px; 
+      display:flex; 
+      align-items:center; 
+      justify-content:center;
+      gap:24px;
+      min-height:100vh;
+      backdrop-filter: blur(6px);
+    }
+
+    /* Container */
+    .app{
+      width:1100px;
+      max-width:calc(100% - 64px);
+      display:grid;
+      grid-template-columns: 380px 1fr;
+      gap:24px;
+      align-items:start;
+    }
+
+    /* Glass card */
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding:18px;
+      backdrop-filter: blur(12px) saturate(120%);
+      box-shadow: var(--glass-shadow);
+      overflow:hidden;
+    }
+
+    /* Sidebar */
+    .sidebar{padding:20px; display:flex; flex-direction:column; gap:16px}
+    .brand{display:flex; gap:12px; align-items:center}
+    .logo{
+      width:48px; height:48px; border-radius:12px; display:grid; place-items:center;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(6px);
+    }
+    .brand h1{font-size:16px;margin:0}
+    .brand p{margin:0;font-size:12px;color:var(--muted)}
+
+    .summary{display:grid; gap:10px}
+    .summary .stat{display:flex; justify-content:space-between; align-items:center; padding:12px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.04)}
+    .stat .label{font-size:12px;color:var(--muted)}
+    .stat .value{font-weight:700}
+
+    /* Form */
+    form{display:flex; flex-direction:column; gap:10px}
+    label{font-size:12px;color:var(--muted)}
+    input[type=text], input[type=number], select{
+      width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:inherit; outline:none;
+      box-shadow: inset 0 -1px 0 rgba(255,255,255,0.02);
+    }
+    .row{display:flex; gap:8px}
+    .row > *{flex:1}
+    button.primary{
+      padding:10px 12px; border-radius:10px; border:0; background:linear-gradient(90deg,#6b5cff,#00d0ff); color:#021;
+      font-weight:700; cursor:pointer; box-shadow: 0 6px 18px rgba(15,10,40,0.5); transition:transform .15s ease; 
+    }
+    button.primary:active{transform:translateY(1px)}
+
+    /* Main area */
+    .main{display:flex; flex-direction:column; gap:16px}
+    .topbar{display:flex; justify-content:space-between; align-items:center; gap:12px}
+    .search{flex:1}
+    .controls{display:flex; gap:8px}
+    .chip{padding:8px 10px; border-radius:999px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.04); font-size:13px}
+
+    /* Transactions list */
+    .transactions{display:flex; flex-direction:column; gap:8px}
+    .txn{display:flex; justify-content:space-between; align-items:center; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.03); background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+    .txn .meta{display:flex; gap:12px; align-items:center}
+    .avatar{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03)}
+    .txn .name{font-weight:600}
+    .txn .cat{font-size:12px;color:var(--muted)}
+    .amount{font-weight:800}
+    .amount.in{color:var(--success)}
+    .amount.out{color:var(--danger)}
+
+    /* Chart area */
+    .card-chart{padding:18px}
+    canvas{width:100% !important; height:260px !important}
+
+    /* Responsive */
+    @media (max-width:980px){
+      .app{grid-template-columns:1fr; width:100%;}
+    }
+
+    /* subtle floating animation for the app container */
+    @keyframes floaty{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+    .app{animation:floaty 8s ease-in-out infinite}
+
+  </style>
+</head>
+<body>
+  <main class="app">
+    <!-- SIDEBAR -->
+    <aside class="card sidebar" aria-label="Seitenleiste">
+      <div class="brand">
+        <div class="logo" aria-hidden>
+          <!-- simple SVG icon -->
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" fill="url(#g)"/></svg>
+        </div>
+        <div>
+          <h1>Budget Manager</h1>
+          <p>Übersicht • Glas‑UI</p>
+        </div>
+      </div>
+
+      <section class="summary" aria-label="Übersicht">
+        <div class="stat">
+          <div>
+            <div class="label">Kontostand</div>
+            <div class="value" id="balance">€0.00</div>
+          </div>
+          <div class="chip">Heute</div>
+        </div>
+
+        <div class="stat">
+          <div>
+            <div class="label">Einnahmen (30d)</div>
+            <div class="value" id="income">€0.00</div>
+          </div>
+          <div class="chip">+ %</div>
+        </div>
+
+        <div class="stat">
+          <div>
+            <div class="label">Ausgaben (30d)</div>
+            <div class="value" id="expense">€0.00</div>
+          </div>
+          <div class="chip">- %</div>
+        </div>
+      </section>
+
+      <section>
+        <form id="entryForm" aria-label="Neuer Eintrag">
+          <label for="title">Titel</label>
+          <input id="title" name="title" type="text" placeholder="z.B. Miete, Gehalt" required />
+
+          <div class="row">
+            <div>
+              <label for="amount">Betrag (€)</label>
+              <input id="amount" name="amount" type="number" step="0.01" placeholder="0.00" required />
+            </div>
+            <div>
+              <label for="type">Typ</label>
+              <select id="type" name="type">
+                <option value="out">Ausgabe</option>
+                <option value="in">Einnahme</option>
+              </select>
+            </div>
+          </div>
+
+          <label for="category">Kategorie</label>
+          <select id="category" name="category">
+            <option>Allgemein</option>
+            <option>Miete</option>
+            <option>Lebensmittel</option>
+            <option>Transport</option>
+            <option>Freizeit</option>
+            <option>Gehalt</option>
+          </select>
+
+          <div style="display:flex;gap:8px">
+            <button type="submit" class="primary">Hinzufügen</button>
+            <button type="button" id="clearBtn" class="chip">Zurücksetzen</button>
+          </div>
+        </form>
+      </section>
+
+    </aside>
+
+    <!-- MAIN -->
+    <section class="main">
+      <div class="card topbar">
+        <div style="display:flex;gap:12px;align-items:center;width:100%">
+          <div class="search">
+            <input id="q" type="text" placeholder="Transaktionen durchsuchen..." style="width:100%; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit" />
+          </div>
+          <div class="controls">
+            <div class="chip">Filter</div>
+            <div class="chip" id="exportBtn">Export</div>
+            <div class="chip" id="resetAll">Löschen</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-chart">
+        <h3 style="margin:0 0 8px 0">Finanzübersicht (30 Tage)</h3>
+        <canvas id="chart"></canvas>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 12px 0">Letzte Transaktionen</h3>
+        <div class="transactions" id="list">
+          <!-- dynamically filled -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /* Basic app: stores transactions in localStorage, updates UI + chart */
+    const $ = (s) => document.querySelector(s);
+    const form = document.getElementById('entryForm');
+    const list = document.getElementById('list');
+    const balanceEl = document.getElementById('balance');
+    const incomeEl = document.getElementById('income');
+    const expenseEl = document.getElementById('expense');
+    const q = document.getElementById('q');
+
+    let txns = JSON.parse(localStorage.getItem('txns_glass')) || [];
+
+    function fmt(n){
+      return n.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+    }
+
+    function save(){
+      localStorage.setItem('txns_glass', JSON.stringify(txns));
+    }
+
+    function calc(){
+      const income = txns.filter(t=>t.type==='in').reduce((s,t)=>s+Number(t.amount),0);
+      const expense = txns.filter(t=>t.type==='out').reduce((s,t)=>s+Number(t.amount),0);
+      const balance = income - expense;
+      incomeEl.textContent = fmt(income);
+      expenseEl.textContent = fmt(expense);
+      balanceEl.textContent = fmt(balance);
+    }
+
+    function renderList(filter=''){
+      list.innerHTML = '';
+      const show = txns.filter(t => (t.title + ' ' + t.category).toLowerCase().includes(filter.toLowerCase()));
+      if(show.length===0){ list.innerHTML = '<div style="color:var(--muted);padding:12px;border-radius:8px">Keine Einträge</div>'; return }
+      show.slice().reverse().forEach(t => {
+        const el = document.createElement('div'); el.className='txn';
+        el.innerHTML = `
+          <div class="meta">
+            <div class="avatar">${t.category[0]||'•'}</div>
+            <div>
+              <div class="name">${escapeHtml(t.title)}</div>
+              <div class="cat">${escapeHtml(t.category)} • ${new Date(t.date).toLocaleDateString()}</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="amount ${t.type==='in'?'in':'out'}">${t.type==='in'?'+':'-'}${fmt(Number(t.amount))}</div>
+            <div style="display:flex;gap:8px"><button data-id="${t.id}" class="chip edit">Bearbeiten</button><button data-id="${t.id}" class="chip del">Löschen</button></div>
+          </div>
+        `;
+        list.appendChild(el);
+      })
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[m] }) }
+
+    form.addEventListener('submit', e=>{
+      e.preventDefault();
+      const title = form.title.value.trim();
+      const amount = Math.abs(Number(form.amount.value) || 0).toFixed(2);
+      const type = form.type.value;
+      const category = form.category.value;
+      if(!title || !amount) return;
+      const entry = {id: Date.now().toString(36), title, amount, type, category, date:new Date().toISOString()};
+      txns.push(entry); save(); calc(); renderList(q.value); updateChart(); form.reset();
+    });
+
+    document.addEventListener('click', e=>{
+      if(e.target.classList.contains('del')){
+        const id = e.target.dataset.id; txns = txns.filter(t=>t.id!==id); save(); calc(); renderList(q.value); updateChart();
+      }
+      if(e.target.classList.contains('edit')){
+        const id = e.target.dataset.id; const t = txns.find(x=>x.id===id); if(!t) return;
+        form.title.value = t.title; form.amount.value = t.amount; form.type.value = t.type; form.category.value = t.category;
+        // remove original
+        txns = txns.filter(x=>x.id!==id); save(); calc(); renderList(q.value); updateChart();
+      }
+    });
+
+    $('#clearBtn').addEventListener('click', ()=>{ form.reset(); });
+    $('#resetAll').addEventListener('click', ()=>{ if(confirm('Alle Daten löschen?')){ txns=[]; save(); calc(); renderList(); updateChart(); } });
+    $('#exportBtn').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(txns, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'budget-export.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    q.addEventListener('input', ()=>renderList(q.value));
+
+    /* Simple chart using Canvas 2D (no external libs). It draws a small line showing cumulative balance over time */
+    const canvas = document.getElementById('chart');
+    const ctx = canvas.getContext('2d');
+    function updateChart(){
+      // prepare 30-day buckets
+      const days = 30; const now = new Date();
+      const buckets = Array.from({length:days}, (_,i)=>({date:new Date(now.getFullYear(), now.getMonth(), now.getDate()- (days-1-i)), value:0}));
+      txns.forEach(t=>{
+        const d = new Date(t.date); const dayIndex = Math.floor(( (d - buckets[0].date)/(1000*60*60*24) ));
+        if(dayIndex>=0 && dayIndex<days){ buckets[dayIndex].value += (t.type==='in'?1:-1)*Number(t.amount); }
+      });
+      // cumulative
+      let cum=0; const cumArr = buckets.map(b=>cum+=b.value);
+
+      // draw
+      const w = canvas.width = canvas.clientWidth * devicePixelRatio;
+      const h = canvas.height = 260 * devicePixelRatio;
+      ctx.clearRect(0,0,w,h);
+      // background subtle gradient
+      const g = ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'rgba(255,255,255,0.02)'); g.addColorStop(1,'rgba(255,255,255,0.01)');
+      ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+
+      const min = Math.min(...cumArr,0); const max = Math.max(...cumArr,100);
+      const range = (max - min) || 1;
+      ctx.lineWidth = 3 * devicePixelRatio;
+      // stroke (accent)
+      ctx.beginPath();
+      cumArr.forEach((v,i)=>{
+        const x = (i/(days-1)) * w;
+        const y = h - ((v - min)/range) * h;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      // stroke gradient
+      const sg = ctx.createLinearGradient(0,0,w,0); sg.addColorStop(0,'rgba(127,96,255,0.95)'); sg.addColorStop(1,'rgba(0,200,255,0.95)');
+      ctx.strokeStyle = sg; ctx.stroke();
+
+      // fill under curve subtle
+      ctx.lineTo(w, h); ctx.lineTo(0,h); ctx.closePath();
+      const fg = ctx.createLinearGradient(0,0,0,h); fg.addColorStop(0,'rgba(127,96,255,0.12)'); fg.addColorStop(1,'rgba(0,200,255,0.02)');
+      ctx.fillStyle = fg; ctx.fill();
+
+      // small markers
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      for(let i=0;i<days;i+=5){
+        const v = cumArr[i]; const x = (i/(days-1))*w; const y = h - ((v-min)/range)*h; ctx.beginPath(); ctx.arc(x,y,4*devicePixelRatio,0,Math.PI*2); ctx.fill();
+      }
+    }
+
+    // initial render
+    calc(); renderList(); updateChart();
+
+    // resize handling
+    window.addEventListener('resize', ()=> updateChart());
+
+  </script>
+</body>
+</html>
